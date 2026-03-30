@@ -138,22 +138,22 @@
 
         <div class="question-card" id="q7">
             <div class="q-text">Wohin sollen wir die Analyse schicken?</div>
-            <input type="text" name="Name" placeholder="Ihr Name" required>
-            <input type="email" name="Email" placeholder="Ihre E-Mail-Adresse" required>
+            <input type="text" name="Kunden_Name" placeholder="Ihr Name" required>
+            <input type="email" name="Kunden_Email" placeholder="Ihre E-Mail-Adresse" required>
             <div class="btn-row">
                 <button type="button" class="btn btn-secondary" onclick="back(7,6)">Zurück</button>
                 <button type="submit" class="btn btn-primary" id="submitBtn">Ergebnis anzeigen & Senden →</button>
             </div>
         </div>
 
-        <input type="hidden" name="Question_1_Umsatz" id="hidden_q1">
-        <input type="hidden" name="Question_2_Kundenabhangigkeit" id="hidden_q2">
-        <input type="hidden" name="Question_3_Vertretung" id="hidden_q3">
-        <input type="hidden" name="Question_4_Rentabilitat" id="hidden_q4">
-        <input type="hidden" name="Question_5_Zeitraum" id="hidden_q5">
-        <input type="hidden" name="Question_6_Grund" id="hidden_q6">
-        <input type="hidden" name="Score_Total" id="hiddenScore">
-        <input type="hidden" name="Verdict" id="hiddenCategory">
+        <input type="hidden" name="Umsatz" id="hidden_q1">
+        <input type="hidden" name="Kundenabhangigkeit" id="hidden_q2">
+        <input type="hidden" name="Vertretung" id="hidden_q3">
+        <input type="hidden" name="Rentabilitat" id="hidden_q4">
+        <input type="hidden" name="Zeitraum" id="hidden_q5">
+        <input type="hidden" name="Verkaufsgrund" id="hidden_q6">
+        <input type="hidden" name="Gesamt_Score" id="hiddenScore">
+        <input type="hidden" name="Ergebnis_Kategorie" id="hiddenCategory">
     </form>
 
     <div class="result-card" id="result">
@@ -175,6 +175,7 @@
         
         answers[q] = { val: val, pts: pts };
         
+        // Mise à jour du champ caché correspondant
         const hiddenField = document.getElementById('hidden_q' + q);
         if(hiddenField) hiddenField.value = val;
         
@@ -196,16 +197,21 @@
 
     function updateProgress(step) {
         const pct = (step / TOTAL) * 100;
-        document.getElementById('progressFill').style.width = pct + '%';
-        document.getElementById('progressCount').textContent = `Frage ${step} von ${TOTAL}`;
+        const fill = document.getElementById('progressFill');
+        if(fill) fill.style.width = pct + '%';
+        const count = document.getElementById('progressCount');
+        if(count) count.textContent = `Frage ${step} von ${TOTAL}`;
     }
 
     document.getElementById('quizForm').onsubmit = async (e) => {
         e.preventDefault();
+        const form = e.target;
         const btn = document.getElementById('submitBtn');
+        
         btn.disabled = true;
         btn.textContent = "Wird gesendet...";
 
+        // Calcul du Score
         let totalScore = 0;
         for (let key in answers) { totalScore += answers[key].pts; }
         
@@ -213,36 +219,49 @@
 
         if (totalScore <= 6) { 
             verdict = "Nicht übertragbar"; titleClass = "red"; icon = "🔴"; 
-            desc = "„Ihr Unternehmen ist zu sehr vom Geschäftsführer abhängig“"; 
+            desc = "Ihr Unternehmen ist derzeit zu sehr vom Geschäftsführer abhängig."; 
         }
         else if (totalScore <= 12) { 
             verdict = "Mit Vorbereitung übertragbar"; titleClass = "orange"; icon = "🟠"; 
-            desc = "„Ein Verkauf ist möglich, erfordert jedoch einige Anpassungen“"; 
+            desc = "Ein Verkauf ist möglich, erfordert jedoch einige strategische Anpassungen."; 
         }
         else { 
             verdict = "Sofort verfügbar"; titleClass = "green"; icon = "🟢"; 
-            desc = "„Ihr Unternehmen könnte für industrielle Käufer interessant sein“"; 
+            desc = "Ihr Unternehmen ist optimal aufgestellt und für industrielle Käufer sehr interessant."; 
         }
 
+        // Remplir les derniers champs cachés avant envoi
         document.getElementById('hiddenScore').value = totalScore;
         document.getElementById('hiddenCategory').value = verdict;
 
+        // Envoi effectif à Formspree
         try {
-            await fetch(e.target.action, {
+            const response = await fetch(form.action, {
                 method: 'POST',
-                body: new FormData(e.target),
+                body: new FormData(form),
                 headers: { 'Accept': 'application/json' }
             });
-        } catch (error) { console.error("Error", error); }
 
-        document.getElementById('quizForm').style.display = 'none';
-        const resCard = document.getElementById('result');
-        resCard.classList.add('active');
-        document.getElementById('resultTitle').textContent = verdict;
-        document.getElementById('resultTitle').className = "result-title " + titleClass;
-        document.getElementById('resultIcon').textContent = icon;
-        document.getElementById('resultDesc').textContent = desc;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (response.ok) {
+                // Affichage du résultat uniquement si l'envoi a réussi
+                form.style.display = 'none';
+                const resCard = document.getElementById('result');
+                resCard.classList.add('active');
+                document.getElementById('resultTitle').textContent = verdict;
+                document.getElementById('resultTitle').className = "result-title " + titleClass;
+                document.getElementById('resultIcon').textContent = icon;
+                document.getElementById('resultDesc').textContent = desc;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                alert("Fehler beim Senden. Bitte versuchen Sie es erneut.");
+                btn.disabled = false;
+                btn.textContent = "Ergebnis anzeigen & Senden →";
+            }
+        } catch (error) {
+            console.error("Error", error);
+            alert("Verbindungsproblem. Bitte prüfen Sie Ihre Internetverbindung.");
+            btn.disabled = false;
+        }
     };
 </script>
 </body>
